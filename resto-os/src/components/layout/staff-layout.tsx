@@ -1,5 +1,7 @@
 "use client"
 
+"use client"
+
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -16,9 +18,12 @@ import {
   Menu,
   X,
   Home,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 import { signOut } from "next-auth/react"
 import { NotificationBell } from "@/components/notification-bell"
+import { useUIStore } from "@/store/ui-store"
 
 const navItems = [
   { href: "/staff/home", label: "Dashboard", icon: Home },
@@ -31,10 +36,12 @@ const navItems = [
 
 export function StaffLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const { sidebarOpen, toggleSidebar } = useUIStore()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const activeItem = navItems.find((item) => pathname.startsWith(item.href))
 
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div className="flex h-screen overflow-hidden bg-background">
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
@@ -43,21 +50,49 @@ export function StaffLayout({ children }: { children: React.ReactNode }) {
         />
       )}
 
-      {/* Sidebar (tablet+) */}
+      {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r bg-card transition-transform duration-300 lg:static",
+          "fixed inset-y-0 left-0 z-50 flex flex-col border-r bg-sidebar transition-all duration-300 lg:static",
+          sidebarOpen ? "w-64" : "w-16",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
-        <div className="flex h-16 items-center gap-3 border-b px-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-            <UtensilsCrossed className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <span className="text-lg font-bold">RestoOS Staff</span>
+        {/* Logo */}
+        <div
+          className={cn(
+            "flex h-16 items-center border-b px-4",
+            !sidebarOpen && "justify-center"
+          )}
+        >
+          <Link
+            href="/staff/home"
+            className="flex items-center gap-3"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary shrink-0">
+              <UtensilsCrossed className="h-5 w-5 text-primary-foreground" />
+            </div>
+            {sidebarOpen && (
+              <span className="text-lg font-bold text-sidebar-foreground">RestoOS</span>
+            )}
+          </Link>
+          <button
+            onClick={toggleSidebar}
+            className={cn(
+              "ml-auto hidden lg:flex h-8 w-8 items-center justify-center rounded-md hover:bg-sidebar-accent",
+              !sidebarOpen && "ml-0"
+            )}
+          >
+            {sidebarOpen ? (
+              <ChevronLeft className="h-4 w-4 text-sidebar-foreground" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-sidebar-foreground" />
+            )}
+          </button>
         </div>
 
-        <nav className="flex-1 space-y-1 p-4">
+        {/* Navigation */}
+        <nav className="flex-1 space-y-1 p-3">
           {navItems.map((item) => {
             const isActive = pathname.startsWith(item.href)
             return (
@@ -68,31 +103,43 @@ export function StaffLayout({ children }: { children: React.ReactNode }) {
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                   isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent",
+                  !sidebarOpen && "justify-center px-2"
                 )}
+                title={!sidebarOpen ? item.label : undefined}
               >
-                <item.icon className="h-5 w-5" />
-                {item.label}
+                <item.icon className="h-5 w-5 shrink-0" />
+                {sidebarOpen && <span>{item.label}</span>}
               </Link>
             )
           })}
         </nav>
 
-        <div className="border-t p-4">
+        {/* Sign out */}
+        <div
+          className={cn(
+            "border-t p-3",
+            !sidebarOpen && "flex flex-col items-center"
+          )}
+        >
           <Button
             variant="ghost"
-            className="w-full justify-start text-muted-foreground"
+            size={sidebarOpen ? "default" : "icon"}
+            className={cn(
+              "w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent",
+              !sidebarOpen && "w-10 justify-center"
+            )}
             onClick={() => signOut({ callbackUrl: "/auth/login" })}
             aria-label="Sign out"
           >
-            <LogOut className="mr-2 h-5 w-5" />
-            Sign Out
+            <LogOut className="h-5 w-5 shrink-0" />
+            {sidebarOpen && <span className="ml-3">Sign Out</span>}
           </Button>
         </div>
       </aside>
 
-      {/* Main */}
+      {/* Main area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top bar */}
         <header className="flex h-16 items-center gap-4 border-b bg-background px-4 lg:px-6">
@@ -104,33 +151,40 @@ export function StaffLayout({ children }: { children: React.ReactNode }) {
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
 
+          {activeItem && (
+            <div className="hidden sm:block text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">
+                {activeItem.label}
+              </span>
+            </div>
+          )}
+
           <div className="flex-1" />
 
           <NotificationBell />
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-          {children}
-        </main>
+        {/* Content */}
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6">{children}</main>
       </div>
 
       {/* Mobile bottom nav */}
-      <nav className="flex items-center justify-around border-t bg-background px-2 py-2 lg:hidden">
-        {navItems.slice(0, 5).map((item) => {
+      <nav className="flex items-center justify-around border-t bg-background px-1 py-1 lg:hidden">
+        {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href)
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                "flex flex-col items-center gap-0.5 rounded-md px-2 py-1 text-[10px] font-medium transition-colors min-w-0 flex-1",
                 isActive
                   ? "text-primary"
                   : "text-muted-foreground"
               )}
             >
               <item.icon className="h-5 w-5" />
-              {item.label}
+              <span className="truncate max-w-full">{item.label}</span>
             </Link>
           )
         })}

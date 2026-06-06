@@ -62,7 +62,7 @@ function elapsedMinutes(dateStr: string): number {
 export default function KitchenPage() {
   const [loaded, setLoaded] = useState(false)
   const allOrders = useOrderStore((s) => s.orders)
-  const [now, setNow] = useState(Date.now())
+  const [now, setNow] = useState(() => Date.now())
   useRealtimeSync()
 
   const orders = allOrders.filter(

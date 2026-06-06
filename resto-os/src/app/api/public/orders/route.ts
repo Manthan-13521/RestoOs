@@ -85,21 +85,26 @@ async function handler(req: Request) {
     const now = new Date()
     const orderNumber = `ORD-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}-${Date.now().toString(36).toUpperCase().slice(-6)}`
 
+    const orderItems = items.map((i: any) => {
+      const menuItem = menuItemMap.get(i.menuItemId)
+      return {
+        menuItemId: i.menuItemId,
+        name: menuItem.name,
+        quantity: i.quantity,
+        price: menuItem.price,
+        instructions: i.instructions || "",
+      }
+    })
+    const subtotal = orderItems.reduce((sum: number, i: any) => sum + i.price * i.quantity, 0)
+
     const order = await Order.create({
       orderNumber,
       type: "dinein",
       tableId,
       customerId: customer._id,
-      items: items.map((i: any) => {
-        const menuItem = menuItemMap.get(i.menuItemId)
-        return {
-          menuItemId: i.menuItemId,
-          name: menuItem.name,
-          quantity: i.quantity,
-          price: menuItem.price,
-          instructions: i.instructions || "",
-        }
-      }),
+      items: orderItems,
+      subtotal,
+      total: subtotal,
       notes: notes || "",
       organizationId: table.organizationId,
       restaurantId: table.restaurantId,

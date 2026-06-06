@@ -71,21 +71,26 @@ export const POST = withAuth(async (req, context, session) => {
     }
   }
 
+  const orderItems = items.map((i: any) => {
+    const menuItem = menuItemMap.get(i.menuItemId)
+    return {
+      menuItemId: i.menuItemId,
+      name: menuItem.name,
+      quantity: i.quantity,
+      price: menuItem.price,
+      instructions: i.instructions || "",
+    }
+  })
+  const subtotal = orderItems.reduce((sum: number, i: any) => sum + i.price * i.quantity, 0)
+
   const order = await Order.create({
     orderNumber,
     type,
     tableId: type === "dinein" ? tableId : undefined,
     staffId: session.user.id,
-    items: items.map((i: any) => {
-      const menuItem = menuItemMap.get(i.menuItemId)
-      return {
-        menuItemId: i.menuItemId,
-        name: menuItem.name,
-        quantity: i.quantity,
-        price: menuItem.price,
-        instructions: i.instructions || "",
-      }
-    }),
+    items: orderItems,
+    subtotal,
+    total: subtotal,
     notes: notes || "",
     organizationId: session.user.organizationId,
     restaurantId: session.user.restaurantId,

@@ -103,7 +103,10 @@ export default function StaffBillingPage() {
         })
         const data = await res.json()
         if (res.ok) setBill(data)
-        else toast.error(data.error || "Failed")
+        else {
+          if (data.details?.length) data.details.forEach((d: any) => toast.error(d.message))
+          else toast.error(data.error || "Failed")
+        }
       }
       setShowPayment(true)
     } catch {

@@ -90,7 +90,7 @@ export const billSchema = z.object({
         amount: z.number().positive("Amount must be positive"),
       })
     )
-    .min(1, "At least one payment method required"),
+    .default([]),
 })
 
 export const reservationSchema = z.object({

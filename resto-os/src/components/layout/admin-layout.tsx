@@ -25,6 +25,7 @@ import {
   UtensilsCrossed,
   Moon,
   Sun,
+  Tags,
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import { signOut } from "next-auth/react"
@@ -39,7 +40,8 @@ const sidebarItems = [
   { href: "/admin/reservations", label: "Reservations", icon: CalendarClock },
   { href: "/admin/tables",    label: "Tables",     icon: Table2 },
   { href: "/admin/offers",    label: "Offers",     icon: Gift },
-  { href: "/admin/categories", label: "Menu",     icon: ClipboardList },
+  { href: "/staff/menu",      label: "Menu Items", icon: ClipboardList },
+  { href: "/admin/categories", label: "Categories", icon: Tags },
   { href: "/admin/emergency", label: "Emergency", icon: AlertTriangle },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ]

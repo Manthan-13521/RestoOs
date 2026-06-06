@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useEffect, useState, useCallback, useMemo } from "react"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,7 +11,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { CalendarIcon, Plus, Loader2, Search, Pencil, XCircle } from "lucide-react"
+import { CalendarIcon, Plus, Loader2, Search, Pencil, XCircle, Clock, X } from "lucide-react"
+import { cn } from "@/lib/utils"
 import toast from "react-hot-toast"
 
 interface Reservation {
@@ -52,34 +53,30 @@ export default function AdminReservationsPage() {
   const [showEdit, setShowEdit] = useState(false)
   const [cancelId, setCancelId] = useState<string | null>(null)
 
-  const today = new Date().toISOString().split("T")[0]
-
   const loadData = useCallback(async () => {
     try {
       const [resRes, tablesRes] = await Promise.all([
-        fetch(`/api/reservations`),
-        fetch(`/api/tables`),
+        fetch("/api/reservations"),
+        fetch("/api/tables"),
       ])
       const resData = await resRes.json()
       const tablesData = await tablesRes.json()
 
-      const list = Array.isArray(resData) ? resData : resData.data || []
-      setReservations(list)
+      setReservations(Array.isArray(resData) ? resData : resData.data || [])
       setTables(Array.isArray(tablesData) ? tablesData : tablesData.data || [])
     } catch { toast.error("Failed to load reservations") } finally { setLoading(false) }
   }, [])
 
   useEffect(() => { loadData() }, [loadData])
 
-  function filterReservations(): Reservation[] {
-    const now = new Date()
-    const todayStr = now.toISOString().split("T")[0]
+  const filtered = useMemo(() => {
+    const todayStr = new Date().toISOString().split("T")[0]
 
-    let filtered = reservations
+    let result = reservations
 
     if (search) {
       const q = search.toLowerCase()
-      filtered = filtered.filter(r =>
+      result = result.filter(r =>
         r.customerId?.name?.toLowerCase().includes(q) ||
         r.customerId?.phone?.includes(q) ||
         r.tableId?.name?.toLowerCase().includes(q)
@@ -88,17 +85,27 @@ export default function AdminReservationsPage() {
 
     switch (tab) {
       case "today":
-        return filtered.filter(r => r.date.startsWith(todayStr) && r.status === "confirmed")
+        return result.filter(r => r.date.startsWith(todayStr) && r.status === "confirmed")
       case "upcoming":
-        return filtered.filter(r => r.date > todayStr && r.status === "confirmed")
+        return result.filter(r => r.date > todayStr && r.status === "confirmed")
       case "past":
-        return filtered.filter(r => r.status === "completed" || r.status === "no_show")
+        return result.filter(r => r.status === "completed" || r.status === "no_show")
       case "cancelled":
-        return filtered.filter(r => r.status === "cancelled")
+        return result.filter(r => r.status === "cancelled")
       default:
-        return filtered
+        return result
     }
-  }
+  }, [reservations, search, tab])
+
+  const tabCounts = useMemo(() => {
+    const todayStr = new Date().toISOString().split("T")[0]
+    return {
+      today: reservations.filter(r => r.date.startsWith(todayStr) && r.status === "confirmed").length,
+      upcoming: reservations.filter(r => r.date > todayStr && r.status === "confirmed").length,
+      past: reservations.filter(r => r.status === "completed" || r.status === "no_show").length,
+      cancelled: reservations.filter(r => r.status === "cancelled").length,
+    }
+  }, [reservations])
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault(); setSaving(true)
@@ -153,32 +160,48 @@ export default function AdminReservationsPage() {
     no_show: "warning",
   }
 
-  if (loading) return <div className="space-y-6"><Skeleton className="h-10 w-48" /><Skeleton className="h-96 rounded-xl" /></div>
-
-  const filtered = filterReservations()
+  if (loading) return (
+    <div className="space-y-6 animate-fade-in">
+      <div>
+        <Skeleton className="h-9 w-48" />
+        <Skeleton className="h-5 w-64 mt-2" />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-24 rounded-xl" />
+        ))}
+      </div>
+      <Skeleton className="h-64 rounded-xl" />
+    </div>
+  )
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Reservations</h1>
-          <p className="text-muted-foreground">Manage all table reservations</p>
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+            <CalendarIcon className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Reservations</h1>
+            <p className="text-muted-foreground">Manage all table reservations</p>
+          </div>
         </div>
         <Dialog open={showForm} onOpenChange={setShowForm}>
           <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" />New Reservation</Button></DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>Create Reservation</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="space-y-2"><Label>Customer Name</Label><Input value={form.customerName} onChange={e => setForm({...form, customerName: e.target.value})} required /></div>
-              <div className="space-y-2"><Label>Phone</Label><Input value={form.customerPhone} onChange={e => setForm({...form, customerPhone: e.target.value})} required /></div>
+              <div className="space-y-2"><Label>Customer Name</Label><Input value={form.customerName} onChange={e => setForm(p => ({...p, customerName: e.target.value}))} required /></div>
+              <div className="space-y-2"><Label>Phone</Label><Input value={form.customerPhone} onChange={e => setForm(p => ({...p, customerPhone: e.target.value}))} required /></div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>Date</Label><Input type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} required /></div>
-                <div className="space-y-2"><Label>Time</Label><Input type="time" value={form.time} onChange={e => setForm({...form, time: e.target.value})} required /></div>
+                <div className="space-y-2"><Label>Date</Label><Input type="date" value={form.date} onChange={e => setForm(p => ({...p, date: e.target.value}))} required /></div>
+                <div className="space-y-2"><Label>Time</Label><Input type="time" value={form.time} onChange={e => setForm(p => ({...p, time: e.target.value}))} required /></div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>Guests</Label><Input type="number" value={form.guests} onChange={e => setForm({...form, guests: e.target.value})} required min={1} /></div>
+                <div className="space-y-2"><Label>Guests</Label><Input type="number" value={form.guests} onChange={e => setForm(p => ({...p, guests: e.target.value}))} required min={1} /></div>
                 <div className="space-y-2"><Label>Table (optional)</Label>
-                  <Select value={form.tableId} onValueChange={v => setForm({...form, tableId: v})}>
+                  <Select value={form.tableId} onValueChange={v => setForm(p => ({...p, tableId: v}))}>
                     <SelectTrigger><SelectValue placeholder="Auto-assign" /></SelectTrigger>
                     <SelectContent>
                       {tables.filter(t => t.status === "empty").map(t => (
@@ -188,11 +211,53 @@ export default function AdminReservationsPage() {
                   </Select>
                 </div>
               </div>
-              <div className="space-y-2"><Label>Notes</Label><Input value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} /></div>
+              <div className="space-y-2"><Label>Notes</Label><Input value={form.notes} onChange={e => setForm(p => ({...p, notes: e.target.value}))} /></div>
               <Button type="submit" className="w-full" disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Create</Button>
             </form>
           </DialogContent>
         </Dialog>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card className="border-l-4 border-l-green-500">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted/50">
+                <CalendarIcon className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Today</p>
+                <p className="text-xl font-bold">{tabCounts.today}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-blue-500">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted/50">
+                <Clock className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Upcoming</p>
+                <p className="text-xl font-bold">{tabCounts.upcoming}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-red-500">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted/50">
+                <X className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Cancelled</p>
+                <p className="text-xl font-bold">{tabCounts.cancelled}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="flex items-center gap-4">
@@ -204,64 +269,73 @@ export default function AdminReservationsPage() {
 
       <Tabs value={tab} onValueChange={v => setTab(v as FilterTab)}>
         <TabsList>
-          <TabsTrigger value="today">Today</TabsTrigger>
-          <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-          <TabsTrigger value="past">Past</TabsTrigger>
-          <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
+          <TabsTrigger value="today">Today <Badge variant="secondary" className="ml-1.5">{tabCounts.today}</Badge></TabsTrigger>
+          <TabsTrigger value="upcoming">Upcoming <Badge variant="secondary" className="ml-1.5">{tabCounts.upcoming}</Badge></TabsTrigger>
+          <TabsTrigger value="past">Past <Badge variant="secondary" className="ml-1.5">{tabCounts.past}</Badge></TabsTrigger>
+          <TabsTrigger value="cancelled">Cancelled <Badge variant="secondary" className="ml-1.5">{tabCounts.cancelled}</Badge></TabsTrigger>
         </TabsList>
 
         {(["today", "upcoming", "past", "cancelled"] as FilterTab[]).map(t => (
           <TabsContent key={t} value={t}>
             <Card>
-              <CardHeader className="flex flex-row items-center gap-3">
-                <CalendarIcon className="h-5 w-5 text-muted-foreground" />
-                <CardTitle className="text-lg capitalize">{t} Reservations</CardTitle>
-                <Badge variant="secondary" className="ml-auto">{filtered.length}</Badge>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Time</TableHead>
-                      <TableHead>Guests</TableHead>
-                      <TableHead>Table</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="w-20">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filtered.length === 0 ? (
-                      <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No reservations</TableCell></TableRow>
-                    ) : filtered.map(r => (
-                      <TableRow key={r._id}>
-                        <TableCell className="font-medium">{r.customerId?.name || "—"}</TableCell>
-                        <TableCell>{r.customerId?.phone || "—"}</TableCell>
-                        <TableCell>{new Date(r.date).toLocaleDateString()}</TableCell>
-                        <TableCell>{r.time}</TableCell>
-                        <TableCell>{r.guests}</TableCell>
-                        <TableCell>Table {r.tableId?.number} ({r.tableId?.name})</TableCell>
-                        <TableCell><Badge variant={statusBadge[r.status] || "secondary"}>{r.status}</Badge></TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8"
-                              onClick={() => { setEditTarget(r); setShowEdit(true) }}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            {r.status === "confirmed" && (
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive"
-                                onClick={() => handleCancel(r._id)}>
-                                <XCircle className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
+              <CardContent className="p-0">
+                {filtered.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                      <CalendarIcon className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-muted-foreground">No reservations found</h3>
+                    <p className="mt-1 text-sm text-muted-foreground max-w-sm">
+                      {t === "today" ? "No reservations scheduled for today." :
+                       t === "upcoming" ? "No upcoming reservations scheduled." :
+                       t === "past" ? "No past reservations found." :
+                       "No cancelled reservations."}
+                    </p>
+                    <Button className="mt-4" onClick={() => setShowForm(true)}><Plus className="mr-2 h-4 w-4" />New Reservation</Button>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead className="font-semibold">Customer</TableHead>
+                        <TableHead className="font-semibold">Phone</TableHead>
+                        <TableHead className="font-semibold">Date</TableHead>
+                        <TableHead className="font-semibold">Time</TableHead>
+                        <TableHead className="font-semibold">Guests</TableHead>
+                        <TableHead className="font-semibold">Table</TableHead>
+                        <TableHead className="font-semibold">Status</TableHead>
+                        <TableHead className="font-semibold w-20">Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {filtered.map((r, i) => (
+                        <TableRow key={r._id} className={cn(i % 2 === 0 && "bg-muted/50")}>
+                          <TableCell className="font-medium min-w-0 truncate">{r.customerId?.name || "—"}</TableCell>
+                          <TableCell className="min-w-0 truncate">{r.customerId?.phone || "—"}</TableCell>
+                          <TableCell className="min-w-0 truncate">{new Date(r.date).toLocaleDateString()}</TableCell>
+                          <TableCell>{r.time}</TableCell>
+                          <TableCell>{r.guests}</TableCell>
+                          <TableCell className="min-w-0 truncate">Table {r.tableId?.number} ({r.tableId?.name})</TableCell>
+                          <TableCell><Badge variant={statusBadge[r.status] || "secondary"}>{r.status.replace("_", " ")}</Badge></TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Button variant="ghost" size="icon" className="h-8 w-8"
+                                onClick={() => { setEditTarget(r); setShowEdit(true) }}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              {r.status === "confirmed" && (
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive"
+                                  onClick={() => handleCancel(r._id)}>
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

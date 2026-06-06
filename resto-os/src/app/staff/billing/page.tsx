@@ -86,7 +86,8 @@ export default function StaffBillingPage() {
 
   const loading = !loaded
 
-  const pendingAmount = orders.reduce((sum: number, o: any) => sum + (o.total || 0), 0)
+  const calcTotal = (o: any) => o.total || o.subtotal || o.items?.reduce((s: number, i: any) => s + i.price * i.quantity, 0) || 0
+  const pendingAmount = orders.reduce((sum: number, o: any) => sum + calcTotal(o), 0)
   const avgPending = orders.length > 0 ? Math.round(pendingAmount / orders.length) : 0
 
   async function generateBill(order: any) {
@@ -309,7 +310,7 @@ export default function StaffBillingPage() {
                         </span>
                       </TableCell>
                       <TableCell className="text-right font-semibold">
-                        {formatCurrency(order.total)}
+                        {formatCurrency(calcTotal(order))}
                       </TableCell>
                       <TableCell>
                         <Badge

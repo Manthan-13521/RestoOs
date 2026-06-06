@@ -55,7 +55,8 @@ export const POST = withAuth(async (req, context, session) => {
 
   const taxRate = restaurant?.settings?.taxRate ?? 5
   const billNumber = `BILL-${Date.now().toString(36).toUpperCase().slice(-8)}`
-  const subtotal = order.subtotal || order.total || 0
+  const itemsTotal = order.items?.length ? order.items.reduce((s: number, i: any) => s + i.price * i.quantity, 0) : 0
+  const subtotal = order.subtotal || order.total || itemsTotal
   const tax = Math.round((subtotal * taxRate) / 100)
 
   const bill = await Bill.create({

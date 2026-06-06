@@ -151,6 +151,8 @@ export default function AdminStaffPage() {
         toast.success(editing ? "Staff updated!" : "Staff added!")
         setShowDialog(false)
         loadStaff()
+      } else if (data.details?.length) {
+        data.details.forEach((d: any) => toast.error(d.message || d.path?.join(".") + " invalid"))
       } else toast.error(data.error || "Failed")
     } catch {
       toast.error("Something went wrong")
@@ -442,6 +444,8 @@ export default function AdminStaffPage() {
                   onChange={(e) =>
                     setForm((p) => ({ ...p, phone: e.target.value }))
                   }
+                  placeholder="+91 9876543210"
+                  minLength={10}
                 />
               </div>
               <div className="space-y-2">

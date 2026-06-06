@@ -34,7 +34,7 @@ const RestaurantSchema = new Schema<IRestaurant>(
     organizationId: { type: Schema.Types.ObjectId, ref: "Organization", required: true },
     name: { type: String, required: true },
     slug: { type: String, required: true },
-    address: { type: String, required: true },
+    address: { type: String, default: "" },
     phone: { type: String, required: true },
     email: { type: String, required: true },
     gstin: { type: String },

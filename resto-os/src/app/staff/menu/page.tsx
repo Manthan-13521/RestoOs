@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
+import { useSession } from "next-auth/react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -61,6 +62,8 @@ interface Category {
 }
 
 export default function StaffMenuPage() {
+  const { data: session } = useSession()
+  const canManageMenu = session?.user?.role === "admin" || session?.user?.role === "manager" || session?.user?.role === "superadmin"
   const [items, setItems] = useState<MenuItemData[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
@@ -286,10 +289,12 @@ export default function StaffMenuPage() {
             </p>
           </div>
         </div>
-        <Button onClick={openAdd}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Item
-        </Button>
+        {canManageMenu && (
+          <Button onClick={openAdd}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Item
+          </Button>
+        )}
       </div>
 
       {/* Summary Cards */}
@@ -387,7 +392,7 @@ export default function StaffMenuPage() {
               ? "Try a different search or category"
               : "Add your first menu item to get started"}
           </p>
-          {!search && !activeCategory && (
+          {!search && !activeCategory && canManageMenu && (
             <Button onClick={openAdd} className="mt-4">
               <Plus className="mr-2 h-4 w-4" />
               Add Item
@@ -450,30 +455,32 @@ export default function StaffMenuPage() {
                   </Badge>
                 </div>
                 {/* Actions */}
-                <div className="absolute inset-x-0 bottom-0 flex justify-end gap-1 p-2 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-8 w-8 bg-white/90 hover:bg-white text-foreground"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      openEdit(item)
-                    }}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-8 w-8 bg-white/90 hover:bg-white text-destructive"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleDelete(item)
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                {canManageMenu && (
+                  <div className="absolute inset-x-0 bottom-0 flex justify-end gap-1 p-2 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="h-8 w-8 bg-white/90 hover:bg-white text-foreground"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openEdit(item)
+                      }}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="h-8 w-8 bg-white/90 hover:bg-white text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDelete(item)
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {/* Content */}
@@ -508,17 +515,19 @@ export default function StaffMenuPage() {
                       </Badge>
                     )}
                   </div>
-                  <Button
-                    variant={item.status === "available" ? "outline" : "default"}
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      toggleStatus(item)
-                    }}
-                  >
-                    {item.status === "available" ? "Mark OOS" : "Restock"}
-                  </Button>
+                  {canManageMenu && (
+                    <Button
+                      variant={item.status === "available" ? "outline" : "default"}
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleStatus(item)
+                      }}
+                    >
+                      {item.status === "available" ? "Mark OOS" : "Restock"}
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

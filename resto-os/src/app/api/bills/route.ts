@@ -59,17 +59,24 @@ export const POST = withAuth(async (req, context, session) => {
   const subtotal = order.subtotal || order.total || itemsTotal
   const tax = Math.round((subtotal * taxRate) / 100)
 
+  const serviceCharge = order.serviceCharge || 0
+  const discount = body.discount ?? order.discount ?? 0
+  const total = subtotal + tax + serviceCharge - discount
+
   const bill = await Bill.create({
     orderId,
     billNumber,
     subtotal,
     taxRate,
     tax,
-    total: subtotal + tax,
+    serviceCharge,
+    discount,
+    total,
     paidAmount: 0,
-    remainingAmount: subtotal + tax,
+    remainingAmount: total,
     status: "pending",
     payments: payments || [],
+    staffId: session.user.id,
     organizationId: session.user.organizationId,
     restaurantId: session.user.restaurantId,
   })

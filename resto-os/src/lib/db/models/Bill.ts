@@ -13,6 +13,7 @@ export interface IBill extends Document {
   organizationId: mongoose.Types.ObjectId
   restaurantId: mongoose.Types.ObjectId
   orderId: mongoose.Types.ObjectId
+  staffId?: mongoose.Types.ObjectId
   billNumber: string
   subtotal: number
   taxRate: number
@@ -46,6 +47,7 @@ const BillSchema = new Schema<IBill>(
     organizationId: { type: Schema.Types.ObjectId, ref: "Organization", required: true },
     restaurantId: { type: Schema.Types.ObjectId, ref: "Restaurant", required: true },
     orderId: { type: Schema.Types.ObjectId, ref: "Order", required: true },
+    staffId: { type: Schema.Types.ObjectId, ref: "User" },
     billNumber: { type: String, required: true },
     subtotal: { type: Number, required: true },
     taxRate: { type: Number, default: 5 },

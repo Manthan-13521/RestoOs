@@ -1,6 +1,7 @@
 import { Bill } from "@/lib/db/models/Bill"
 import { Order } from "@/lib/db/models/Order"
 import { Restaurant } from "@/lib/db/models/Restaurant"
+import { User } from "@/lib/db/models/User"
 import { withAuth, apiSuccess, apiError } from "@/lib/db/helpers"
 
 export const GET = withAuth(async (req, context, session) => {
@@ -13,12 +14,21 @@ export const GET = withAuth(async (req, context, session) => {
 
   if (!bill) return apiError("Bill not found", 404)
 
-  const order = await Order.findById(bill.orderId).populate("tableId", "number name").lean()
-  if (!order) return apiError("Order not found", 404)
+  const [order, restaurant, cashier] = await Promise.all([
+    Order.findById(bill.orderId).lean(),
+    Restaurant.findById(session.user.restaurantId)
+      .select("name address phone email gstin settings logo")
+      .lean(),
+    bill.staffId
+      ? User.findById(bill.staffId).select("name email").lean()
+      : null,
+  ])
 
-  const restaurant = await Restaurant.findById(session.user.restaurantId)
-    .select("name address phone email gstin settings")
-    .lean()
+  let tableInfo = null
+  if (order?.tableId) {
+    const { Table } = await import("@/lib/db/models/Table")
+    tableInfo = await Table.findById(order.tableId).select("number name").lean()
+  }
 
-  return apiSuccess({ bill, order, restaurant })
+  return apiSuccess({ bill, order, restaurant, cashier, tableInfo })
 })

@@ -2,7 +2,7 @@ import { Bill } from "@/lib/db/models/Bill"
 import { Order } from "@/lib/db/models/Order"
 import { withAuth, apiSuccess, apiError, createAuditLog, requirePermission } from "@/lib/db/helpers"
 
-const ALLOWED_BILL_FIELDS = new Set(["notes", "status", "payments", "paidAmount", "remainingAmount", "total", "discount", "serviceCharge"])
+const ALLOWED_BILL_FIELDS = new Set(["notes", "status", "payments", "paidAmount", "remainingAmount", "total", "discount", "serviceCharge", "staffId"])
 const VALID_STATUSES = new Set(["pending", "paid", "partial", "cancelled"])
 const VALID_PAYMENT_METHODS = new Set(["cash", "card", "upi", "online"])
 

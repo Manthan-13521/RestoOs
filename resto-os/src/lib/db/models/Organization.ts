@@ -13,7 +13,7 @@ const OrganizationSchema = new Schema<IOrganization>(
   {
     name: { type: String, required: true },
     slug: { type: String, required: true, unique: true },
-    ownerId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    ownerId: { type: Schema.Types.ObjectId, ref: "User", default: null },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }

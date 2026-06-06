@@ -1,5 +1,5 @@
 import { MenuItem } from "@/lib/db/models/MenuItem"
-import { withAuth, apiSuccess, apiError, createAuditLog, requireRole } from "@/lib/db/helpers"
+import { withAuth, apiSuccess, apiError, createAuditLog, requirePermission } from "@/lib/db/helpers"
 
 const ALLOWED_MENU_FIELDS = new Set([
   "name", "price", "description", "categoryId", "type",
@@ -18,7 +18,7 @@ export const GET = withAuth(async (req, context, session) => {
 })
 
 export const PUT = withAuth(async (req, context, session) => {
-  requireRole(session, "manager")
+  requirePermission(session, "menu:manage")
   const { id } = await context.params
   const body = await req.json()
 
@@ -53,7 +53,7 @@ export const PUT = withAuth(async (req, context, session) => {
 })
 
 export const DELETE = withAuth(async (req, context, session) => {
-  requireRole(session, "manager")
+  requirePermission(session, "menu:manage")
   const { id } = await context.params
 
   await MenuItem.findOneAndUpdate(

@@ -1,5 +1,5 @@
 import { MenuItem } from "@/lib/db/models/MenuItem"
-import { withAuth, apiSuccess, apiError, parsePagination, requireRole } from "@/lib/db/helpers"
+import { withAuth, apiSuccess, apiError, parsePagination, requirePermission } from "@/lib/db/helpers"
 import { menuItemSchema, validateBody } from "@/lib/validations"
 import { NextResponse } from "next/server"
 
@@ -32,7 +32,7 @@ export const GET = withAuth(async (req, context, session) => {
 })
 
 export const POST = withAuth(async (req, context, session) => {
-  requireRole(session, "manager")
+  requirePermission(session, "menu:manage")
   const body = await req.json()
   const result = validateBody(menuItemSchema, body)
   if (!result.success) {
